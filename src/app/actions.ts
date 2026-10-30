@@ -77,7 +77,8 @@ async function uploadCover(file: File, slug: string) {
   const ext = (file.name.split(".").pop() ?? "jpg").toLowerCase().replace(/[^a-z0-9]/g, "");
   const name = `work/${slug}-${Date.now()}.${ext}`;
   // The site is another deployment, so covers always go to Vercel Blob, even in development
-  if (!process.env.BLOB_READ_WRITE_TOKEN) throw new Error("Image uploads need BLOB_READ_WRITE_TOKEN: connect Vercel Blob to the project.");
+  // Newer stores connect with BLOB_STORE_ID (signed in through Vercel OIDC), older ones with a token
+  if (!process.env.BLOB_STORE_ID && !process.env.BLOB_READ_WRITE_TOKEN) throw new Error("Image uploads need a Vercel Blob store: connect a public one to the project.");
   const blob = await put(name, file, { access: "public", contentType: file.type });
   return blob.url;
 }

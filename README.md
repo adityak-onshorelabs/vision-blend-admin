@@ -8,13 +8,13 @@ The content admin for the Vision Blend website, deployed on its own Vercel proje
 - **Defaults:** where nothing is saved yet, forms start from the site's code, fetched from `GET {SITE_URL}/api/cms`.
 - **Refresh:** after every save the admin calls `POST {SITE_URL}/api/cms`, which revalidates the site's `cms` cache tag, so no redeploy is needed.
 - Both calls send `Authorization: Bearer {CMS_SECRET}`; the site must have the same `CMS_SECRET`.
-- **Covers:** uploaded to Vercel Blob (`BLOB_READ_WRITE_TOKEN`), so the site can load them from `*.public.blob.vercel-storage.com`.
+- **Covers:** uploaded to a **public** Vercel Blob store (`BLOB_STORE_ID`, or `BLOB_READ_WRITE_TOKEN` on older stores), so the site can load them from `*.public.blob.vercel-storage.com`.
 
 `src/lib/cms/schema.ts` and `team.ts` are copies of the site's files of the same name. Change both together: a document the site's schema rejects falls back to its default there.
 
 ## Environment
 
-See `.env.example`: `SITE_URL`, `CMS_SECRET`, `DATABASE_URL`, `SESSION_SECRET`, `BLOB_READ_WRITE_TOKEN`.
+See `.env.example`: `SITE_URL`, `CMS_SECRET`, `DATABASE_URL`, `SESSION_SECRET`, and `BLOB_STORE_ID` (set by connecting a public Blob store).
 
 ## Setup
 
