@@ -4,7 +4,7 @@ The content admin for the Vision Blend website, deployed on its own Vercel proje
 
 ## How it talks to the site
 
-- **Storage:** the same Neon database as the site (`DATABASE_URL`). The admin writes the `content` table and owns `admin_users`; the site only reads `content`.
+- **Storage:** the same Railway Postgres as the site (`DATABASE_URL`, Railway's `DATABASE_PUBLIC_URL`). The admin writes the `content` table and owns `admin_users`; the site only reads `content`.
 - **Defaults:** where nothing is saved yet, forms start from the site's code, fetched from `GET {SITE_URL}/api/cms`.
 - **Refresh:** after every save the admin calls `POST {SITE_URL}/api/cms`, which revalidates the site's `cms` cache tag, so no redeploy is needed.
 - Both calls send `Authorization: Bearer {CMS_SECRET}`; the site must have the same `CMS_SECRET`.
@@ -18,7 +18,7 @@ See `.env.example`: `SITE_URL`, `CMS_SECRET`, `DATABASE_URL`, `SESSION_SECRET`, 
 
 ## Setup
 
-1. Create a Vercel project from this folder; connect the site's Neon database and a Blob store; set the variables above.
+1. Create a Vercel project from this folder; set `DATABASE_URL` to the site's Railway Postgres, connect a Blob store; set the variables above.
 2. Create the first owner: `npm run cms-setup -- --email you@onshorelabs.co.in --name "Your Name"` (password from `CMS_PASSWORD` or a prompt).
 3. Sign in; owners add the client's editors under **Editors & account**.
 

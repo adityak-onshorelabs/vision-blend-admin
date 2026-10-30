@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /*
-  Creates (or resets) an admin account. Uses Neon when DATABASE_URL is set, otherwise the local
+  Creates (or resets) an admin account. Uses Postgres (Railway) when DATABASE_URL is set, otherwise the local
   development store (CMS_DEV_FILE, by default ../website/.cms-dev.json), the same way the app does.
 
     node --env-file=.env.local scripts/cms-setup.mjs --email you@onshorelabs.co.in --name "Your Name" [--role owner|editor]
@@ -42,13 +42,15 @@ const hash = await scrypt(password, salt, 64);
 const passwordHash = `scrypt$${salt.toString("base64")}$${hash.toString("base64")}`;
 
 if (process.env.DATABASE_URL) {
-  const { neon } = await import("@neondatabase/serverless");
-  const sql = neon(process.env.DATABASE_URL);
+  const { default: postgres } = await import("postgres");
+  const local = /@(localhost|127\.0\.0\.1)[:/]/.test(process.env.DATABASE_URL);
+  const sql = postgres(process.env.DATABASE_URL, { max: 1, ssl: local ? false : "require" });
   await sql`create table if not exists content (key text primary key, data jsonb not null, updated_at timestamptz not null default now(), updated_by text)`;
   await sql`create table if not exists admin_users (email text primary key, name text not null, password_hash text not null, role text not null default 'editor', created_at timestamptz not null default now())`;
   await sql`insert into admin_users (email, name, password_hash, role) values (${email}, ${name}, ${passwordHash}, ${role})
     on conflict (email) do update set name = excluded.name, password_hash = excluded.password_hash, role = excluded.role`;
-  console.log(`Saved ${role} ${email} in Neon.`);
+  await sql.end();
+  console.log(`Saved ${role} ${email} in the database.`);
 } else {
   const file = path.resolve(process.env.CMS_DEV_FILE ?? path.join(process.cwd(), "..", "website", ".cms-dev.json"));
   let store = { content: {}, users: {} };

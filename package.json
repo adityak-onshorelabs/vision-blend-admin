@@ -10,11 +10,11 @@
     "cms-setup": "node --env-file=.env.local scripts/cms-setup.mjs"
   },
   "dependencies": {
-    "@neondatabase/serverless": "^1.2.0",
     "@vercel/blob": "^2.8.2",
     "cn": "^0.5.0",
     "jose": "^6.2.14",
     "next": "16.4.3",
+    "postgres": "^3.4.9",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "shadcn": "^4.23.0",
