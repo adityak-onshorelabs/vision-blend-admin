@@ -10,14 +10,15 @@ const ErrorsContext = createContext<Record<string, string>>({});
 type Action = (state: FormState, fd: FormData) => Promise<FormState>;
 
 /** A form bound to a Server Action: inline field errors, a status line, a pending submit button. */
-export function ActionForm({ action, submit, children, className }: { action: Action; submit: string; children: ReactNode; className?: string }) {
+/** `compact` (sign-in): no rule above the button, and the button spans the form. */
+export function ActionForm({ action, submit, children, className, compact }: { action: Action; submit: string; children: ReactNode; className?: string; compact?: boolean }) {
   const [state, formAction] = useActionState(action, {});
   return (
     <ErrorsContext.Provider value={state.errors ?? {}}>
       <form action={formAction} noValidate className={cn("grid gap-7", className)}>
         {children}
-        <div className="flex flex-wrap items-center gap-4 border-t border-border pt-6">
-          <Submit label={submit} />
+        <div className={cn("flex flex-wrap items-center gap-4", compact ? "pt-2" : "border-t border-border pt-6")}>
+          <Submit label={submit} wide={compact} />
           {state.message && (
             <p role={state.ok ? "status" : "alert"} className={cn("text-[0.92rem]", state.ok ? "text-brand" : "text-destructive")}>
               {state.message}
@@ -29,10 +30,10 @@ export function ActionForm({ action, submit, children, className }: { action: Ac
   );
 }
 
-function Submit({ label }: { label: string }) {
+function Submit({ label, wide }: { label: string; wide?: boolean }) {
   const { pending } = useFormStatus();
   return (
-    <button type="submit" className="cta" disabled={pending}>
+    <button type="submit" className={cn("cta", wide && "w-full justify-center")} disabled={pending}>
       {pending ? "Saving…" : label}
     </button>
   );
