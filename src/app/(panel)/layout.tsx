@@ -4,6 +4,7 @@ import { requireSession } from "@/lib/cms/auth";
 import { siteUrl } from "@/lib/cms/site";
 import { logout } from "../actions";
 import { AdminNav } from "../_components/nav";
+import { Tour } from "../_components/tour";
 
 /** Signed-in shell. The session is read from a cookie, so it streams in inside Suspense. */
 export default function PanelLayout({ children }: LayoutProps<"/">) {
@@ -23,8 +24,12 @@ async function Shell({ children }: { children: React.ReactNode }) {
           <Image src="/images/logo-white.png" alt="Vision Blend" width={120} height={24} className="h-6 w-auto justify-self-start" priority />
           <span className="t-label !text-[var(--on-night-muted)]">Admin</span>
         </div>
-        <AdminNav owner={session.role === "owner"} />
+        <div data-tour="nav">
+          <AdminNav owner={session.role === "owner"} />
+        </div>
         <div className="mt-auto grid gap-3 border-t border-white/15 pt-5 text-[0.9rem]">
+          <Tour />
+          <div data-tour="session" className="grid gap-3 border-t border-white/15 pt-3">
           <span className="text-[var(--on-night-muted)]">
             Signed in as <span className="text-[var(--on-night)]">{session.name}</span>
           </span>
@@ -37,6 +42,7 @@ async function Shell({ children }: { children: React.ReactNode }) {
                 Sign out
               </button>
             </form>
+          </div>
           </div>
         </div>
       </aside>

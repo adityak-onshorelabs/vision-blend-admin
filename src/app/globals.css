@@ -476,3 +476,4 @@ html:has([data-hero]):not([data-intro="done"], [data-intro="off"]) .site-header 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition-duration: 0.01ms !important; animation: none !important; }
 }
+

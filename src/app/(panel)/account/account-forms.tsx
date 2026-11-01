@@ -30,9 +30,9 @@ export function AddEditorForm() {
 export function PasswordForm() {
   return (
     <ActionForm action={changePassword} submit="Change password">
-      <div className="grid gap-5 sm:grid-cols-2">
+      <div className="grid max-w-[28rem] gap-5">
         <Field name="current" label="Current password" type="password" />
-        <Field name="password" label="New password" type="password" hint="At least 10 characters" />
+        <Field name="newPassword" label="New password" type="password" hint="At least 10 characters" />
       </div>
     </ActionForm>
   );

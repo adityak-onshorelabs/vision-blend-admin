@@ -1,0 +1,35 @@
+/* driver.js tour in the admin's look. Loaded after driver.css, which sets its own font on every child. */
+.driver-popover.vb-tour {
+  min-width: 280px; max-width: 360px; padding: 24px 24px 20px;
+  border-radius: 0; background: var(--paper); color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--rule), 0 24px 60px oklch(0.17 0.006 40 / 0.25);
+}
+.driver-popover.vb-tour, .driver-popover.vb-tour * { font-family: var(--font-jost), ui-sans-serif, system-ui, sans-serif; }
+
+.vb-tour .driver-popover-title { font-size: 1.35rem; font-weight: 300; line-height: 1.15; letter-spacing: -0.02em; color: var(--ink); padding-inline-end: 24px; }
+.vb-tour .driver-popover-title::after { content: "."; color: var(--brand); }
+.vb-tour .driver-popover-description { margin-top: 8px; font-size: 0.95rem; font-weight: 400; line-height: 1.55; color: var(--muted); }
+
+.vb-tour .driver-popover-footer { margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--rule); gap: 12px; }
+.vb-tour .driver-popover-progress-text { font-size: 0.72rem; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase; color: var(--faint); }
+.vb-tour .driver-popover-navigation-btns { gap: 8px; }
+.vb-tour .driver-popover-navigation-btns button + button { margin-left: 0; }
+
+/* Buttons match .cta / .cta-line .cta-sm */
+.vb-tour .driver-popover-footer button {
+  display: inline-flex; align-items: center; gap: 10px; min-height: 36px; padding: 0 16px;
+  border: 1px solid var(--ink); border-radius: 999px; background: transparent; color: var(--ink);
+  font-size: 0.86rem; font-weight: 450; line-height: 1; text-shadow: none;
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+.vb-tour .driver-popover-footer button:hover, .vb-tour .driver-popover-footer button:focus-visible { background: var(--ink); color: var(--paper); }
+.vb-tour .driver-popover-footer .driver-popover-next-btn { background: var(--ink); color: var(--paper); }
+.vb-tour .driver-popover-footer .driver-popover-next-btn::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--brand-soft); transition: transform 0.4s var(--ease); }
+.vb-tour .driver-popover-footer .driver-popover-next-btn:hover, .vb-tour .driver-popover-footer .driver-popover-next-btn:focus-visible { background: var(--brand); border-color: var(--brand); }
+.vb-tour .driver-popover-footer .driver-popover-next-btn:hover::before { transform: scale(1.5); }
+.vb-tour .driver-popover-footer button:focus-visible { outline: 1.5px solid var(--brand); outline-offset: 3px; }
+
+.vb-tour .driver-popover-close-btn { top: 10px; right: 10px; width: 28px; height: 28px; font-size: 20px; font-weight: 300; color: var(--faint); }
+.vb-tour .driver-popover-close-btn:hover, .vb-tour .driver-popover-close-btn:focus-visible { color: var(--ink); }
+
+.vb-tour .driver-popover-arrow { display: none; }

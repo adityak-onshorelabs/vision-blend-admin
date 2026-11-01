@@ -276,9 +276,9 @@ export async function addUser(_: FormState, fd: FormData): Promise<FormState> {
 export async function changePassword(_: FormState, fd: FormData): Promise<FormState> {
   const s = await requireSession();
   const user = await getUser(s.email);
-  const next = str(fd, "password");
+  const next = str(fd, "newPassword");
   if (!user || !(await verifyPassword(str(fd, "current"), user.password_hash))) return { errors: { current: "Your current password is not right" } };
-  if (next.length < 10) return { errors: { password: "Use at least 10 characters" } };
+  if (next.length < 10) return { errors: { newPassword: "Use at least 10 characters" } };
   await saveUser({ ...user, password_hash: await hashPassword(next) });
   return { ok: true, message: "Password changed." };
 }

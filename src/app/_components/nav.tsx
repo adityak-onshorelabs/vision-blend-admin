@@ -41,7 +41,7 @@ export function AdminNav({ owner }: { owner: boolean }) {
 /** Page title, with the brand full stop, and a short note on what this screen changes. */
 export function PageHead({ title, text }: { title: string; text: string }) {
   return (
-    <header className="grid gap-3 border-b border-border pb-8">
+    <header data-tour="page-head" className="grid gap-3 border-b border-border pb-8">
       <h1 className="t-h1">
         {title}
         <span className="stop">.</span>
