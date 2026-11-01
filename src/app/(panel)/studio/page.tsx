@@ -13,7 +13,7 @@ export default async function StudioPage() {
     <>
       <PageHead
         title="Studio details"
-        text="Team size and how to reach the studio. These appear in the hero, on About, on the Contact page and in every email link."
+        text="How to reach the studio. These appear on the home page, on the Contact page and in every email link."
       />
       <StudioForm studio={studio} />
     </>

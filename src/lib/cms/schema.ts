@@ -18,6 +18,10 @@ export const LIMITS = {
   projectParagraph: 600,
   episodeTitle: 60,
   episodeBy: 30,
+  phoneName: 20,
+  location: 40,
+  memberName: 40,
+  memberRole: 50,
 } as const;
 
 const text = (max: number) => z.string().trim().min(1, "Required").max(max, `Keep it to ${max} characters`);
@@ -29,18 +33,32 @@ const instagramUrl = z
   .regex(/^https:\/\/(www\.)?instagram\.com\/(p|reel)\/[\w-]+\/?$/, "Paste an Instagram post or reel link, like https://www.instagram.com/reel/ABC123/")
   .transform((u) => (u.endsWith("/") ? u : `${u}/`));
 
-export const studioSchema = z.object({
-  teamSize: z.coerce.number().int().min(1, "At least 1").max(99, "Up to 99"),
-  email: z.email("Enter a valid email address"),
-  emailCc: z.email("Enter a valid email address").optional().or(z.literal("").transform(() => undefined)),
-  phone: z
+export const phoneSchema = z.object({
+  name: text(LIMITS.phoneName),
+  number: z
     .string()
     .trim()
-    .regex(/^\+?[\d\s().-]{7,20}$/, "Use digits, spaces and an optional leading +, like +91 98765 43210")
-    .optional()
-    .or(z.literal("").transform(() => undefined)),
+    .regex(/^\+?[\d\s().-]{7,20}$/, "Use digits, spaces and an optional leading +, like +91 98765 43210"),
+});
+
+/** The team size isn't here: it is the number of people on the Team screen. */
+export const studioSchema = z.object({
+  email: z.email("Enter a valid email address"),
+  emailCc: z.email("Enter a valid email address").optional().or(z.literal("").transform(() => undefined)),
+  phones: z.array(phoneSchema).max(2).default([]),
+  location: optionalText(LIMITS.location),
 });
 export type Studio = z.infer<typeof studioSchema>;
+
+export const memberSchema = z.object({
+  name: text(LIMITS.memberName),
+  role: text(LIMITS.memberRole),
+  /** Uploaded portrait (Vercel Blob URL); the site shows photos once every member has one */
+  photo: z.url().optional(),
+});
+export type CmsMember = z.infer<typeof memberSchema>;
+
+export const teamSchema = z.array(memberSchema).min(1, "Keep at least one person").max(40);
 
 export const heroSchema = z.object({
   eyebrow: text(LIMITS.eyebrow),
@@ -93,15 +111,16 @@ export const episodesSchema = z
   .array(episodeSchema)
   .refine((es) => new Set(es.map((e) => e.ep)).size === es.length, "Two episodes have the same number");
 
-/** One row per key in the content table. Services and industries come later. */
+/** One row per key in the content table. Industries and their services come later. */
 export const docSchemas = {
   studio: studioSchema,
+  team: teamSchema,
   hero: heroSchema,
   projects: projectsSchema,
   episodes: episodesSchema,
 } as const;
 export type DocKey = keyof typeof docSchemas;
-export type Docs = { studio: Studio; hero: Hero; projects: CmsProject[]; episodes: CmsEpisode[] };
+export type Docs = { studio: Studio; team: CmsMember[]; hero: Hero; projects: CmsProject[]; episodes: CmsEpisode[] };
 
 /** "my new project" -> "my-new-project" */
 export function slugify(name: string) {

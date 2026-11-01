@@ -6,7 +6,7 @@ import type { z } from "zod";
 import { endSession, hashPassword, requireSession, startSession, verifyPassword } from "@/lib/cms/auth";
 import { loadDocs } from "@/lib/cms/admin-data";
 import { deleteUser, getUser, listUsers, saveUser, writeDoc, type Role } from "@/lib/cms/db";
-import { docSchemas, episodeSchema, heroSchema, projectSchema, slugify, studioSchema, type CmsProject, type DocKey } from "@/lib/cms/schema";
+import { docSchemas, episodeSchema, heroSchema, memberSchema, projectSchema, slugify, studioSchema, type CmsMember, type CmsProject, type DocKey } from "@/lib/cms/schema";
 import { refreshSite } from "@/lib/cms/site";
 
 export type FormState = { ok?: boolean; message?: string; errors?: Record<string, string> };
@@ -59,7 +59,11 @@ export async function logout() {
 
 export async function saveStudio(_: FormState, fd: FormData): Promise<FormState> {
   const s = await requireSession();
-  const parsed = studioSchema.safeParse({ teamSize: str(fd, "teamSize"), email: str(fd, "email"), emailCc: str(fd, "emailCc"), phone: str(fd, "phone") });
+  // Two phone slots; a slot left empty is dropped, a half-filled one is an error on that field
+  const phones = [0, 1]
+    .map((i) => ({ name: str(fd, `phones.${i}.name`).trim(), number: str(fd, `phones.${i}.number`).trim() }))
+    .filter((p) => p.name || p.number);
+  const parsed = studioSchema.safeParse({ email: str(fd, "email"), emailCc: str(fd, "emailCc"), phones, location: str(fd, "location") });
   if (!parsed.success) return { errors: errorsOf(parsed.error) };
   return commit("studio", parsed.data, s.email);
 }
@@ -73,9 +77,10 @@ export async function saveHero(_: FormState, fd: FormData): Promise<FormState> {
 
 /* Work projects */
 
-async function uploadCover(file: File, slug: string) {
+/** Uploads an image to Vercel Blob under folder/slug-timestamp.ext and returns its public URL. */
+async function uploadImage(file: File, folder: string, slug: string) {
   const ext = (file.name.split(".").pop() ?? "jpg").toLowerCase().replace(/[^a-z0-9]/g, "");
-  const name = `work/${slug}-${Date.now()}.${ext}`;
+  const name = `${folder}/${slug}-${Date.now()}.${ext}`;
   // The site is another deployment, so covers always go to Vercel Blob, even in development
   // Newer stores connect with BLOB_STORE_ID (signed in through Vercel OIDC), older ones with a token
   if (!process.env.BLOB_STORE_ID && !process.env.BLOB_READ_WRITE_TOKEN) throw new Error("Image uploads need a Vercel Blob store: connect a public one to the project.");
@@ -103,7 +108,7 @@ export async function saveProject(_: FormState, fd: FormData): Promise<FormState
     if (!file.type.startsWith("image/")) return { errors: { cover: "Upload an image (JPG, PNG or WebP)" } };
     if (file.size > 4 * 1024 * 1024) return { errors: { cover: "Keep the image under 4 MB" } };
     try {
-      cover = await uploadCover(file, slug || "project");
+      cover = await uploadImage(file, "work", slug || "project");
     } catch (err) {
       return { errors: { cover: err instanceof Error ? err.message : "Upload failed" } };
     }
@@ -164,6 +169,63 @@ export async function deleteProject(fd: FormData) {
   const slug = str(fd, "slug");
   await updateProjects((ps) => ps.filter((p) => p.slug !== slug));
   redirect("/work");
+}
+
+/* Team */
+
+export async function saveMember(_: FormState, fd: FormData): Promise<FormState> {
+  const s = await requireSession();
+  const { team } = await loadDocs();
+  // Members are addressed by position; "original" is empty when adding
+  const original = str(fd, "original");
+  const index = original === "" ? -1 : Number(original);
+  const existing = index >= 0 ? team[index] : undefined;
+  if (index >= 0 && !existing) return { message: "This person was changed elsewhere. Reload the page and try again." };
+
+  const name = str(fd, "name").trim();
+  let photo = fd.get("removePhoto") ? undefined : existing?.photo;
+  const file = fd.get("photo");
+  if (file instanceof File && file.size > 0) {
+    if (!file.type.startsWith("image/")) return { errors: { photo: "Upload an image (JPG, PNG or WebP)" } };
+    if (file.size > 4 * 1024 * 1024) return { errors: { photo: "Keep the image under 4 MB" } };
+    try {
+      photo = await uploadImage(file, "team", slugify(name) || "member");
+    } catch (err) {
+      return { errors: { photo: err instanceof Error ? err.message : "Upload failed" } };
+    }
+  }
+
+  const parsed = memberSchema.safeParse({ name, role: str(fd, "role"), photo });
+  if (!parsed.success) return { errors: errorsOf(parsed.error) };
+  if (team.some((m, i) => i !== index && m.name.toLowerCase() === parsed.data.name.toLowerCase())) return { errors: { name: "This person is already in the team" } };
+
+  const next = index >= 0 ? team.map((m, i) => (i === index ? parsed.data : m)) : [...team, parsed.data];
+  const result = await commit("team", next, s.email);
+  if (result.ok) redirect("/team?saved=1");
+  return result;
+}
+
+async function updateTeam(change: (ms: CmsMember[]) => CmsMember[]) {
+  const s = await requireSession();
+  const { team } = await loadDocs();
+  const result = await commit("team", change(team), s.email);
+  if (!result.ok) throw new Error(result.message ?? "Could not save");
+}
+
+export async function moveMember(fd: FormData) {
+  const i = Number(str(fd, "index"));
+  const j = i + (str(fd, "dir") === "up" ? -1 : 1);
+  await updateTeam((ms) => {
+    if (!ms[i] || !ms[j]) return ms;
+    const next = [...ms];
+    [next[i], next[j]] = [next[j], next[i]];
+    return next;
+  });
+}
+
+export async function deleteMember(fd: FormData) {
+  const i = Number(str(fd, "index"));
+  await updateTeam((ms) => ms.filter((_, k) => k !== i));
 }
 
 /* Series episodes */

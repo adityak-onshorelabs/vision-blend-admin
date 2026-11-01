@@ -8,6 +8,7 @@ const ITEMS = [
   { href: "/hero", label: "Hero" },
   { href: "/work", label: "Work" },
   { href: "/series", label: "Series" },
+  { href: "/team", label: "Team" },
   { href: "/studio", label: "Studio details" },
 ];
 
