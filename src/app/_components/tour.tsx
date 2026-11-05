@@ -69,6 +69,37 @@ const PAGES: Record<string, { label: string; steps: Step[] }> = {
       { element: "main button[type=submit]", title: "Save", text: "Saves all the details at once." },
     ],
   },
+  "/industries": {
+    label: "Industries",
+    steps: [
+      { element: "[data-tour=page-head]", title: "Industries", text: "One page per industry, each sent on its own to prospects." },
+      { element: "main ol > li a", title: "Open one", text: "Click a name to edit that industry's hero, showcase films, copy and Drive portfolio." },
+    ],
+  },
+  "/industries/": {
+    label: "Industry",
+    steps: [
+      { element: "[data-tour=page-head]", title: "One industry", text: "Every section of the industry's page. Click a section's name to open or close it." },
+      { element: "main details", title: "Hero", text: "Upload the full-screen photo, describe it, and set the words over it. Wrap a word in *stars* to show it in brown." },
+      { element: "main details:nth-of-type(4)", title: "Showcase cards", text: "Each card has a looping film, a poster, its frame shape and the studio's Drive folder. Use the arrows to reorder and ✕ to remove." },
+      { element: "main details:last-of-type", title: "Portfolio from Drive", text: "Paste a Drive file's share link; the thumbnail appears so you can check it. The file must be shared as “Anyone with the link”." },
+      { element: "main form > div:last-child", title: "Save", text: "Saves the whole page at once. If something needs a fix, its section opens and the field is marked." },
+    ],
+  },
+  "/pages": {
+    label: "Pages",
+    steps: [
+      { element: "[data-tour=page-head]", title: "Pages", text: "The words on each page: titles, intros, section headings and search listings." },
+      { element: "main ol > li a", title: "Open one", text: "Click a page to edit its copy." },
+    ],
+  },
+  "/pages/": {
+    label: "Page",
+    steps: [
+      { element: "[data-tour=page-head]", title: "Page copy", text: "Open a section to edit it. Counters show each field's limit, so the layout keeps its shape." },
+      { element: "main form > div:last-child", title: "Save", text: "Nothing changes on the site until you save." },
+    ],
+  },
   "/account": {
     label: "Account",
     steps: [
@@ -87,13 +118,15 @@ const SHELL: Step[] = [
   { element: "[data-tour=tour]", title: "Help anytime", text: "“Guide this page” explains just the screen you're on." },
 ];
 
-const ORDER = ["/hero", "/work", "/series", "/team", "/studio", "/account"];
+const ORDER = ["/hero", "/industries", "/pages", "/work", "/series", "/team", "/studio", "/account"];
 const MODE = "vb-tour"; // sessionStorage: "full" while the full tour crosses pages
 const SEEN = "vb-tour-seen"; // localStorage: the full tour has been offered once
 
 function pageKey(path: string) {
   if (PAGES[path]) return path;
   if (path.startsWith("/work/")) return "/work/";
+  if (path.startsWith("/industries/")) return "/industries/";
+  if (path.startsWith("/pages/")) return "/pages/";
   return null;
 }
 

@@ -1,6 +1,8 @@
 # Vision Blend admin
 
-The content admin for the Vision Blend website, deployed on its own Vercel project. Editors change the hero (label, tagline, intro, with length limits), Work projects (add, edit, reorder, feature, cover image), series episodes and studio details (team size, email, CC, phone). Long-form copy stays in the site's `src/content/en.ts`.
+The content admin for the Vision Blend website, deployed on its own Vercel project. Editors change the hero (label, tagline, intro, with length limits), each **industry page** (hero photo and words, showcase films and posters, Drive folders, value, process, FAQs, closing, search listing, and the Drive portfolio), the copy on every **page** (home sections, showreel, beliefs, process steps, About, Work, Industries, Contact), Work projects (add, edit, reorder, feature, cover image), series episodes, the team and studio details. Only the contact form's microcopy, navigation and legal details stay in the site's `src/content/en.ts`.
+
+Industry pages and page copy use one editor (`src/app/_components/doc-editor.tsx`) driven by a field spec per screen. It holds the whole record and saves it as JSON; images and films upload to Blob the moment they are picked (4.4 MB cap per file, so larger films go to ImageKit and are pasted as a link). Drive fields accept a full share link and keep only the file id.
 
 ## How it talks to the site
 

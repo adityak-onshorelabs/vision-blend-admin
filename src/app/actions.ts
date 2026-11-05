@@ -6,7 +6,7 @@ import type { z } from "zod";
 import { endSession, hashPassword, requireSession, startSession, verifyPassword } from "@/lib/cms/auth";
 import { loadDocs } from "@/lib/cms/admin-data";
 import { deleteUser, getUser, listUsers, saveUser, writeDoc, type Role } from "@/lib/cms/db";
-import { docSchemas, episodeSchema, heroSchema, memberSchema, projectSchema, slugify, studioSchema, type CmsMember, type CmsProject, type DocKey } from "@/lib/cms/schema";
+import { docSchemas, episodeSchema, heroSchema, industrySchema, memberSchema, pagesSchema, projectSchema, slugify, studioSchema, type CmsMember, type CmsProject, type DocKey, type PageKey } from "@/lib/cms/schema";
 import { refreshSite } from "@/lib/cms/site";
 
 export type FormState = { ok?: boolean; message?: string; errors?: Record<string, string> };
@@ -249,6 +249,60 @@ export async function deleteEpisode(fd: FormData) {
   const ep = Number(str(fd, "ep"));
   const result = await commit("episodes", episodes.filter((e) => e.ep !== ep), s.email);
   if (!result.ok) throw new Error(result.message ?? "Could not save");
+}
+
+/* Industry pages and page copy (the document editor sends the whole record as JSON) */
+
+function json(fd: FormData): unknown {
+  try {
+    return JSON.parse(str(fd, "data"));
+  } catch {
+    return null;
+  }
+}
+
+export async function saveIndustry(slug: string, _: FormState, fd: FormData): Promise<FormState> {
+  const s = await requireSession();
+  const parsed = industrySchema.safeParse(json(fd));
+  if (!parsed.success) return { errors: errorsOf(parsed.error), message: "Some fields need a fix. They are marked below." };
+  if (parsed.data.slug !== slug) return { message: "This industry was changed elsewhere. Reload the page and try again." };
+  const { industries } = await loadDocs();
+  if (!industries.some((i) => i.slug === slug)) return { message: "This industry no longer exists on the site." };
+  return commit("industries", industries.map((i) => (i.slug === slug ? parsed.data : i)), s.email);
+}
+
+export async function savePage(page: PageKey, _: FormState, fd: FormData): Promise<FormState> {
+  const s = await requireSession();
+  const parsed = pagesSchema.shape[page].safeParse(json(fd));
+  if (!parsed.success) return { errors: errorsOf(parsed.error), message: "Some fields need a fix. They are marked below." };
+  const { pages } = await loadDocs();
+  return commit("pages", { ...pages, [page]: parsed.data }, s.email);
+}
+
+export type Upload = { url?: string; error?: string };
+
+const VIDEO_TYPES = ["video/mp4", "video/webm"];
+const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/avif"];
+
+/**
+ * Uploads one image or film as soon as it is picked, so a save only sends text. Server Action
+ * bodies are capped at 4.5 MB on Vercel; bigger films go to ImageKit (or a Blob link) and are pasted.
+ */
+export async function uploadMedia(fd: FormData): Promise<Upload> {
+  await requireSession();
+  const file = fd.get("file");
+  const kind = str(fd, "kind") === "video" ? "video" : "image";
+  const folder = slugify(str(fd, "folder")) || "media";
+  if (!(file instanceof File) || file.size === 0) return { error: "Pick a file to upload" };
+  if (kind === "image" && !IMAGE_TYPES.includes(file.type)) return { error: "Upload a JPG, PNG, WebP or AVIF image" };
+  if (kind === "video" && !VIDEO_TYPES.includes(file.type)) return { error: "Upload an MP4 (H.264) or WebM film" };
+  if (file.size > 4.4 * 1024 * 1024) return { error: kind === "video" ? "Films over 4.4 MB can't be uploaded here: upload it to ImageKit and paste its link instead" : "Keep the image under 4.4 MB" };
+  const base = slugify(file.name.replace(/\.[^.]+$/, "")) || kind;
+  try {
+    return { url: await uploadImage(file, folder, base) };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Upload failed" };
+  }
 }
 
 /* Editors (owner only) */
