@@ -57,6 +57,7 @@ const sections: SectionSpec[] = [
           { kind: "text", key: "title", label: "Title", max: 40 },
           { kind: "text", key: "subtitle", label: "Subtitle", max: 80 },
           { kind: "media", key: "video", label: "Showcase film", accept: "video", folder: "industries", optional: true, hint: "A short muted loop: MP4 (H.264), 1080p, under 4.4 MB. Bigger films: upload to ImageKit and paste the link." },
+          { kind: "url", key: "instagram", label: "…or an Instagram post or reel", placeholder: "https://www.instagram.com/reel/…", hint: "Plays in Instagram's own player when there is no film above. Its shape is set for you." },
           { kind: "photo", key: "image", label: "Poster / still", folder: "industries", hint: "Shown while the film loads, or instead of it when there is no film." },
           { kind: "ratio", key: "ratio", label: "Frame" },
           { kind: "folder", key: "assets", label: "Drive folder (internal)", hint: "Where the studio keeps this category's files. Never shown on the site." },
@@ -197,7 +198,8 @@ const sections: SectionSpec[] = [
             empty: () => ({ title: "", category: "", drive: "", kind: "film", ratio: [16, 9] }),
             hint: "The filters on the page are built from the categories, in the order they first appear.",
             fields: [
-              { kind: "drive", key: "drive", label: "Drive file" },
+              { kind: "drive", key: "drive", label: "Drive file", hint: "Paste the file's share link (shared as “Anyone with the link”), or leave empty and use Instagram below." },
+              { kind: "url", key: "instagram", label: "…or an Instagram post or reel", placeholder: "https://www.instagram.com/p/…" },
               { kind: "text", key: "title", label: "Title", max: 80 },
               { kind: "text", key: "category", label: "Category", max: 40, hint: "Use the same spelling as the showcase cards, e.g. Ads" },
               { kind: "text", key: "client", label: "Client (optional)", max: 40 },

@@ -146,6 +146,9 @@ const driveFolder = z
   .optional()
   .or(z.literal("").transform(() => undefined));
 
+/** Instagram post or reel link, optional (an empty field clears it) */
+const optionalInstagram = instagramUrl.optional().or(z.literal("").transform(() => undefined));
+
 const ratioSchema = z.tuple([z.coerce.number().positive().max(10000), z.coerce.number().positive().max(10000)]);
 
 export const photoSchema = z.object({
@@ -164,19 +167,25 @@ export const offeringSchema = z.object({
   text: loose(400),
   image: photoSchema.optional(),
   video: optionalMedia,
+  /** Instagram's own player in the card, when there is no looping film */
+  instagram: optionalInstagram,
   ratio: ratioSchema.optional(),
   assets: driveFolder,
 });
 
-export const workItemSchema = z.object({
-  title: req(80),
-  category: req(40),
-  client: opt(40),
-  drive: driveFile,
-  kind: z.enum(["film", "still"]),
-  ratio: ratioSchema,
-  poster: optionalMedia,
-});
+/** A portfolio piece is a Drive file or an Instagram post/reel */
+export const workItemSchema = z
+  .object({
+    title: req(80),
+    category: req(40),
+    client: opt(40),
+    drive: driveFile.optional().or(z.literal("").transform(() => undefined)),
+    instagram: optionalInstagram,
+    kind: z.enum(["film", "still"]),
+    ratio: ratioSchema,
+    poster: optionalMedia,
+  })
+  .refine((w) => !!w.drive !== !!w.instagram, { message: "Paste a Drive file link or an Instagram link (one of the two)", path: ["drive"] });
 
 export const industryDetailSchema = z.object({
   eyebrow: opt(60),
