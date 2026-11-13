@@ -51,7 +51,7 @@ export default async function AccountPage() {
         <p className="max-w-[56ch] text-muted-foreground">
           Lost a laptop or signed in on a shared computer? Sign out everywhere ends every session on your account, this one included. Changing your password does the same for your other devices.
         </p>
-        <form action={signOutEverywhere}>
+        <form action={signOutEverywhere} data-tour="signout-all">
           <button type="submit" className="cta cta-line cta-sm">
             Sign out everywhere
           </button>

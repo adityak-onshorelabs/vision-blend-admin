@@ -123,7 +123,7 @@ export function DocEditor({
         const base = section.at ? [section.at] : [];
         const bad = section.fields.some((f) => errorsUnder(errors, [...base, f.key]));
         return (
-          <details key={section.title} open={i === 0 || bad || undefined} className="group border-t border-border pt-4">
+          <details key={section.title} data-section={section.title} open={i === 0 || bad || undefined} className="group border-t border-border pt-4">
             <summary className="flex cursor-pointer list-none items-baseline justify-between gap-4 py-1 [&::-webkit-details-marker]:hidden">
               <span className="grid gap-1">
                 <span className={cn("t-label marker", bad && "!text-destructive")}>{section.title}</span>
@@ -228,7 +228,16 @@ function TextInput({
 
 const btn = "cta cta-line cta-sm disabled:opacity-30";
 
-function FieldView({ spec, path, value, ctx }: { spec: FieldSpec; path: Path; value: Json; ctx: Ctx }): ReactNode {
+/** One field, marked with its path (data-field="detail.hero") for the guided tour */
+function FieldView(props: { spec: FieldSpec; path: Path; value: Json; ctx: Ctx }): ReactNode {
+  return (
+    <div data-field={props.path.join(".")} className="grid min-w-0">
+      <FieldBody {...props} />
+    </div>
+  );
+}
+
+function FieldBody({ spec, path, value, ctx }: { spec: FieldSpec; path: Path; value: Json; ctx: Ctx }): ReactNode {
   switch (spec.kind) {
     case "text":
       return (
@@ -311,7 +320,7 @@ function FieldView({ spec, path, value, ctx }: { spec: FieldSpec; path: Path; va
         return (
           <div className="grid gap-1.5">
             <span className="t-label">{spec.label}</span>
-            <button type="button" className={cn(btn, "justify-self-start")} onClick={() => ctx.set(path, spec.optional!())}>
+            <button type="button" data-add={path.join(".")} className={cn(btn, "justify-self-start")} onClick={() => ctx.set(path, spec.optional!())}>
               + Add {spec.label.toLowerCase()}
             </button>
             {spec.hint && <span className="text-[0.84rem] text-muted-foreground">{spec.hint}</span>}
@@ -349,7 +358,7 @@ function move<T>(list: T[], i: number, j: number) {
 
 function RowTools({ i, n, onMove, onRemove, label }: { i: number; n: number; onMove: (j: number) => void; onRemove: () => void; label: string }) {
   return (
-    <span className="flex shrink-0 items-center gap-1.5">
+    <span data-row-tools className="flex shrink-0 items-center gap-1.5">
       <button type="button" className={btn} disabled={i === 0} aria-label={`Move ${label} up`} onClick={() => onMove(i - 1)}>
         ↑
       </button>
@@ -389,7 +398,7 @@ function StringsField({ spec, path, value, ctx }: { spec: Extract<FieldSpec, { k
         );
       })}
       {(spec.limit === undefined || value.length < spec.limit) && (
-        <button type="button" className={cn(btn, "justify-self-start")} onClick={() => ctx.set(path, [...value, ""])}>
+        <button type="button" data-add={path.join(".")} className={cn(btn, "justify-self-start")} onClick={() => ctx.set(path, [...value, ""])}>
           + Add {spec.item.toLowerCase()}
         </button>
       )}
@@ -451,6 +460,7 @@ function ListField({ spec, path, value, ctx }: { spec: Extract<FieldSpec, { kind
       {spec.empty && (spec.limit === undefined || value.length < spec.limit) && (
         <button
           type="button"
+          data-add={path.join(".")}
           className={cn(btn, "justify-self-start")}
           onClick={() => {
             setOpened(value.length);

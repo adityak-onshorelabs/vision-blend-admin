@@ -39,7 +39,7 @@ export default async function WorkAdminPage() {
             </div>
             <div className="col-start-2 flex flex-wrap items-center gap-2 sm:col-start-3">
               {!p.featured && p.real && p.instagram && (
-                <form action={featureProject}>
+                <form action={featureProject} data-tour="feature">
                   <input type="hidden" name="slug" value={p.slug} />
                   <button type="submit" className="cta cta-line cta-sm">Make featured</button>
                 </form>

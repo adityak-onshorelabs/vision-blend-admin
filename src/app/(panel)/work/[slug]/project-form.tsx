@@ -75,7 +75,7 @@ function DeleteProject({ slug, featured }: { slug: string; featured: boolean }) 
   const [armed, setArmed] = useState(false);
   if (featured) return <p className="text-[0.88rem] text-muted-foreground">This is the featured project. Feature another one before deleting it.</p>;
   return (
-    <form action={deleteProject} className="flex flex-wrap items-center gap-4">
+    <form action={deleteProject} data-tour="delete-project" className="flex flex-wrap items-center gap-4">
       <input type="hidden" name="slug" value={slug} />
       {armed ? (
         <>
