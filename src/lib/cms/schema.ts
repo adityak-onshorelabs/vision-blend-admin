@@ -54,7 +54,7 @@ export const memberSchema = z.object({
   name: text(LIMITS.memberName),
   role: text(LIMITS.memberRole),
   /** Uploaded portrait (Vercel Blob URL); the site shows photos once every member has one */
-  photo: z.url().optional(),
+  photo: z.httpUrl().optional(),
 });
 export type CmsMember = z.infer<typeof memberSchema>;
 
@@ -87,7 +87,7 @@ export const projectSchema = z.object({
   /** Shape of the Instagram media, so the embed can be cropped to it */
   embed: z.enum(["landscape", "portrait", "reel"]).optional(),
   /** Uploaded still (Vercel Blob URL), shown where the line drawing would be */
-  cover: z.url().optional(),
+  cover: z.httpUrl().optional(),
 });
 export type CmsProject = z.infer<typeof projectSchema>;
 
@@ -126,7 +126,7 @@ const loose = (max: number) => z.string().trim().max(max, `Keep it to ${max} cha
 const mediaUrl = z
   .string()
   .trim()
-  .regex(/^(\/[^\s]*|https:\/\/[^\s]+)$/, "Upload a file, or paste an https:// link");
+  .regex(/^(\/(?!\/)[^\s]*|https:\/\/[^\s]+)$/, "Upload a file, or paste an https:// link");
 const optionalMedia = mediaUrl.optional().or(z.literal("").transform(() => undefined));
 
 /** Pulls the id out of any Drive file link (/file/d/<id>/…, ?id=<id>), or takes a bare id */
@@ -205,6 +205,14 @@ export const industryDetailSchema = z.object({
   enquiry: z.object({ prompt: req(80), placeholder: req(200) }).optional(),
   meta: z.object({ title: req(70), description: req(170) }).optional(),
   work: z.object({ title: req(80), lead: req(240), items: z.array(workItemSchema).max(120) }).optional(),
+  clients: z
+    .object({
+      title: opt(80),
+      logos: z
+        .array(z.object({ name: req(60), logo: mediaUrl, ratio: ratioSchema, scale: z.coerce.number().min(0.5).max(2).optional() }))
+        .max(40),
+    })
+    .optional(),
 });
 
 export const industrySchema = z.object({
@@ -234,7 +242,7 @@ export const pagesSchema = z.object({
       date: req(20),
       src: mediaUrl,
       poster: mediaUrl,
-      instagram: z.url("Paste the film's Instagram link"),
+      instagram: z.httpUrl("Paste the film's Instagram link"),
       card: z.object({ left: req(30), right: req(40), place: req(60), line: req(100) }),
     }),
     work: sectionHead,
@@ -244,7 +252,7 @@ export const pagesSchema = z.object({
     series: sectionHead,
     contact: sectionHead,
     /** The site's top-level beliefs and process steps (home page) */
-    beliefList: z.array(z.object({ text: req(120), date: req(20), url: z.url("Paste the post's Instagram link") })).max(8),
+    beliefList: z.array(z.object({ text: req(120), date: req(20), url: z.httpUrl("Paste the post's Instagram link") })).max(8),
     steps: z.array(z.object({ name: req(30), text: req(240), out: req(60) })).max(6),
   }),
   about: z.object({

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { requireSession } from "@/lib/cms/auth";
 import { listUsers } from "@/lib/cms/db";
+import { signOutEverywhere } from "../../actions";
 import { PageHead } from "../../_components/nav";
 import { AddEditorForm, PasswordForm, RemoveEditor } from "./account-forms";
 
@@ -43,6 +44,18 @@ export default async function AccountPage() {
       <section className="grid gap-6 bg-paper p-6 sm:p-8">
         <h2 className="t-label marker">Your password</h2>
         <PasswordForm />
+      </section>
+
+      <section className="grid gap-4">
+        <h2 className="t-label marker">Signed-in devices</h2>
+        <p className="max-w-[56ch] text-muted-foreground">
+          Lost a laptop or signed in on a shared computer? Sign out everywhere ends every session on your account, this one included. Changing your password does the same for your other devices.
+        </p>
+        <form action={signOutEverywhere}>
+          <button type="submit" className="cta cta-line cta-sm">
+            Sign out everywhere
+          </button>
+        </form>
       </section>
     </>
   );

@@ -13,5 +13,8 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next|images|favicon.ico|robots.txt|.*\..*).*)"],
+  // Skips Next internals and files with an extension (images, favicon.ico, robots.txt). The dot
+  // must reach the pattern escaped ("\\." in this string): unescaped, ".*..*" matched every path
+  // and the proxy only ever ran on "/".
+  matcher: ["/((?!_next/|images/|.*\\..*).*)"],
 };

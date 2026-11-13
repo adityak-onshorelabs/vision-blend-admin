@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireSession } from "@/lib/cms/auth";
-import { loadDocs } from "@/lib/cms/admin-data";
+import { loadDocs, versionOf } from "@/lib/cms/admin-data";
 import { siteUrl } from "@/lib/cms/site";
 import { PageHead } from "../../../_components/nav";
 import { IndustryForm } from "./industry-form";
@@ -23,6 +23,9 @@ export default async function IndustryPage({ params }: PageProps<"/industries/[s
       </Link>
       <PageHead title={industry.name} text="Everything on this industry's page. Open a section to edit it; nothing changes on the site until you save." />
       <div className="-mt-4 flex flex-wrap gap-x-6 gap-y-2 text-[0.92rem]">
+        <Link href={`/industries/${slug}/history`} className="u">
+          History and restore
+        </Link>
         <a href={siteUrl(`/en/industries/${slug}`)} target="_blank" rel="noopener noreferrer" className="u">
           View page ↗
         </a>
@@ -32,7 +35,7 @@ export default async function IndustryPage({ params }: PageProps<"/industries/[s
           </a>
         )}
       </div>
-      <IndustryForm industry={industry} site={siteUrl("")} />
+      <IndustryForm industry={industry} site={siteUrl("")} version={versionOf(industry)} />
     </>
   );
 }

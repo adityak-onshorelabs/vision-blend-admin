@@ -156,6 +156,6 @@ const PAGE_SPECS: Record<PageKey, SectionSpec[]> = {
   ],
 };
 
-export function PageForm({ page, value, site }: { page: PageKey; value: CmsPages[PageKey]; site: string }) {
-  return <DocEditor value={value} sections={PAGE_SPECS[page]} action={savePage.bind(null, page)} site={site} />;
+export function PageForm({ page, value, site, version }: { page: PageKey; value: CmsPages[PageKey]; site: string; version: string }) {
+  return <DocEditor value={value} sections={PAGE_SPECS[page]} action={savePage.bind(null, page)} site={site} version={version} />;
 }

@@ -14,6 +14,22 @@ Industry pages and page copy use one editor (`src/app/_components/doc-editor.tsx
 
 `src/lib/cms/schema.ts` and `team.ts` are copies of the site's files of the same name. Change both together: a document the site's schema rejects falls back to its default there.
 
+## History and restore
+
+Every save is kept in `content_revisions` (who, when, the saved value). Industry pages and each page's copy have their own **History and restore** screen (`/industries/<slug>/history`, `/pages/<page>/history`); everything else is under **History** (`/activity`). Each version shows the fields it changed from the one before, and **Restore this version** puts it live as a new save, so a restore can be undone the same way. The first save of a part also records what it replaced ("Before history began"). The last 300 versions per part are kept.
+
+Saves run in a transaction with the document locked, so editors saving different industries at once never overwrite each other. The industry and page editors also send the version they opened: if someone else saved in between, the save is refused with a message instead of silently replacing their work.
+
+## Security
+
+- Sessions are checked against the account on every page and action: removing an editor, or changing a password, ends their other sessions at once. **Sign out everywhere** is on the Account screen. Sessions last 7 days.
+- Sign-in allows 5 failed tries per email (30 per IP) in 15 minutes, and takes as long for an unknown email as for a wrong password.
+- Uploads are checked by their bytes (JPG, PNG, WebP, AVIF; MP4, WebM), not by name.
+- Links must be http(s); media paths can't be protocol-relative.
+- Headers: no framing, no indexing, `nosniff`, HSTS. The proxy sends anyone without a session to the sign-in before any page renders.
+
+Tables (`content_revisions`, `login_attempts`, `admin_users.session_version`) are created on first use; deploying this logs every editor out once.
+
 ## Environment
 
 See `.env.example`: `SITE_URL`, `CMS_SECRET`, `DATABASE_URL`, `SESSION_SECRET`, and `BLOB_STORE_ID` (set by connecting a public Blob store).

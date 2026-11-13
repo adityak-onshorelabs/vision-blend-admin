@@ -12,6 +12,7 @@ const ITEMS = [
   { href: "/series", label: "Series" },
   { href: "/team", label: "Team" },
   { href: "/studio", label: "Studio details" },
+  { href: "/activity", label: "History" },
 ];
 
 export function AdminNav({ owner }: { owner: boolean }) {

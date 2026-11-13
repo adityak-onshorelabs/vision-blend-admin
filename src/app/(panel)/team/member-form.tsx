@@ -9,6 +9,7 @@ export function MemberForm({ member, index }: { member: CmsMember | null; index:
   return (
     <ActionForm action={saveMember} submit={member ? "Save person" : "Add person"}>
       <input type="hidden" name="original" value={index ?? ""} />
+      <input type="hidden" name="originalName" value={member?.name ?? ""} />
       <div className="grid gap-5 sm:grid-cols-2">
         <Field name="name" label="Name" max={LIMITS.memberName} defaultValue={member?.name} />
         <Field name="role" label="Role" max={LIMITS.memberRole} defaultValue={member?.role} placeholder="Head of production" />
@@ -24,7 +25,7 @@ export function MemberForm({ member, index }: { member: CmsMember | null; index:
         )}
         <input type="file" name="photo" accept="image/jpeg,image/png,image/webp" className="text-[0.92rem] file:me-4 file:cursor-pointer file:border file:border-ink file:bg-transparent file:px-4 file:py-2 file:text-[0.88rem]" />
         <FieldError name="photo" />
-        <p className="text-[0.84rem] text-muted-foreground">A portrait, cropped to 4:5 on the site. JPG, PNG or WebP, under 4 MB.</p>
+        <p className="text-[0.84rem] text-muted-foreground">A portrait, cropped to 4:5 on the site. JPG, PNG or WebP, under 4.4 MB.</p>
       </div>
     </ActionForm>
   );
@@ -35,6 +36,7 @@ export function DeleteMember({ index, name }: { index: number; name: string }) {
   return (
     <form action={deleteMember} className="flex items-center gap-2">
       <input type="hidden" name="index" value={index} />
+      <input type="hidden" name="name" value={name} />
       {armed ? (
         <>
           <button type="submit" className="cta cta-sm border-[var(--error)] bg-[var(--error)]">Remove</button>

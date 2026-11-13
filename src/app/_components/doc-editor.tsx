@@ -71,12 +71,15 @@ export function DocEditor({
   sections,
   action,
   site,
+  version,
   submit = "Save changes",
 }: {
   value: Json;
   sections: SectionSpec[];
   action: (state: FormState, fd: FormData) => Promise<FormState>;
   site: string;
+  /** Fingerprint of the stored record this form opened; a save is refused if it changed since */
+  version?: string;
   submit?: string;
 }) {
   const [value, setValue] = useState<Json>(initial);
@@ -87,9 +90,13 @@ export function DocEditor({
   const dirty = json !== saved;
   const sent = useRef(json);
 
+  // The stored version this form builds on: what it opened, then whatever it last saved
+  const [base, setBase] = useState(version ?? "");
+
   // After a successful save, what was sent is the new baseline
   useEffect(() => {
     if (state.ok) setSaved(sent.current);
+    if (state.version) setBase(state.version);
   }, [state]);
 
   useEffect(() => {
@@ -111,6 +118,7 @@ export function DocEditor({
       className="grid gap-4"
     >
       <input type="hidden" name="data" value={json} />
+      <input type="hidden" name="base" value={base} />
       {sections.map((section, i) => {
         const base = section.at ? [section.at] : [];
         const bad = section.fields.some((f) => errorsUnder(errors, [...base, f.key]));

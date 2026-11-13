@@ -1,20 +1,30 @@
+import { createHash } from "node:crypto";
 import { readDocs } from "./db";
 import { docSchemas, type DocKey, type Docs } from "./schema";
 import { fetchDefaults } from "./site";
 
-/** Keeps only the saved documents that still validate (same rule as the site's parseDocs). */
-function parseDocs(raw: Partial<Record<DocKey, unknown>>): Partial<Docs> {
-  const out: Partial<Record<DocKey, unknown>> = {};
-  for (const key of Object.keys(docSchemas) as DocKey[]) {
-    if (raw[key] === undefined) continue;
-    const parsed = docSchemas[key].safeParse(raw[key]);
-    if (parsed.success) out[key] = parsed.data;
-  }
-  return out as Partial<Docs>;
+/** A saved document if it still validates (same rule as the site's parseDocs), else undefined */
+export function parseDoc<K extends DocKey>(key: K, raw: unknown): Docs[K] | undefined {
+  if (raw === undefined) return undefined;
+  const parsed = docSchemas[key].safeParse(raw);
+  return parsed.success ? (parsed.data as Docs[K]) : undefined;
 }
 
 /** Current values for the admin forms: saved documents over the site's defaults (uncached). */
 export async function loadDocs(): Promise<Docs> {
   const [defaults, saved] = await Promise.all([fetchDefaults(), readDocs()]);
-  return { ...defaults, ...parseDocs(saved) };
+  const out: Docs = { ...defaults };
+  for (const key of Object.keys(docSchemas) as DocKey[]) {
+    const doc = parseDoc(key, saved[key]);
+    if (doc !== undefined) (out as Record<DocKey, unknown>)[key] = doc;
+  }
+  return out;
+}
+
+/**
+ * A short fingerprint of a value. A form sends back the fingerprint of what it opened, and a save
+ * is refused when what is stored no longer matches (someone else saved in between).
+ */
+export function versionOf(value: unknown) {
+  return createHash("sha256").update(JSON.stringify(value ?? null)).digest("base64url").slice(0, 22);
 }

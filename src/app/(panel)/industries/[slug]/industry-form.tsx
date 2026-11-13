@@ -160,6 +160,35 @@ const sections: SectionSpec[] = [
     ],
   },
   {
+    title: "Client logos",
+    hint: "The strip of client logos under the hero. Optional: with no logos the strip is hidden.",
+    at: "detail",
+    fields: [
+      {
+        kind: "group",
+        key: "clients",
+        label: "Client logos",
+        optional: () => ({ title: "", logos: [] }),
+        fields: [
+          { kind: "text", key: "title", label: "Line above the logos (optional)", max: 80, hint: hintStars() },
+          {
+            kind: "list",
+            key: "logos",
+            label: "Logos",
+            limit: 40,
+            title: (x) => x?.name,
+            empty: () => ({ name: "", logo: "", ratio: [3, 1] }),
+            fields: [
+              { kind: "text", key: "name", label: "Client name", max: 60, hint: "Read out by screen readers; not shown." },
+              { kind: "media", key: "logo", label: "Logo", accept: "image", folder: "clients", hint: "A transparent PNG or WebP works best, under 4.4 MB." },
+              { kind: "ratio", key: "ratio", label: "Logo shape" },
+            ],
+          },
+        ],
+      },
+    ],
+  },
+  {
     title: "Search and sharing",
     hint: "The title and description Google and link previews show.",
     at: "detail",
@@ -214,6 +243,6 @@ const sections: SectionSpec[] = [
   },
 ];
 
-export function IndustryForm({ industry, site }: { industry: CmsIndustry; site: string }) {
-  return <DocEditor value={industry} sections={sections} action={saveIndustry.bind(null, industry.slug)} site={site} />;
+export function IndustryForm({ industry, site, version }: { industry: CmsIndustry; site: string; version: string }) {
+  return <DocEditor value={industry} sections={sections} action={saveIndustry.bind(null, industry.slug)} site={site} version={version} />;
 }
