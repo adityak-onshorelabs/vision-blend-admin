@@ -120,6 +120,15 @@ const PAGES: Record<string, { label: string; steps: Step[] }> = {
       { element: "main ol", title: "Edit, reorder, remove", text: "Edit loads a person into the form above. ↑ ↓ change the order (saved straight away). Remove asks once more; the last person can't be removed." },
     ],
   },
+  "/focus": {
+    label: "People in focus",
+    steps: [
+      { element: "[data-tour=page-head]", title: "People in focus", text: "Recognition on the Careers page, such as Employee of the Month. The section stays hidden on the site until a feature has a name or a photo." },
+      { element: "main section", title: "Step 1 · Fill a feature", text: "A label (e.g. Employee of the Month), the person's name, a date and a short caption. Add a photo: it's cropped to 4:5, JPG, PNG or WebP under 4.4 MB." },
+      { element: "main section button[type=submit]", title: "Step 2 · Save", text: "Click Save. It shows on the Careers page on the next visit." },
+      { element: "main ol", title: "Edit, reorder, remove", text: "Edit loads a feature into the form above. ↑ ↓ change the order (saved straight away). Remove asks once more." },
+    ],
+  },
   "/studio": {
     label: "Studio details",
     steps: [
@@ -134,7 +143,7 @@ const PAGES: Record<string, { label: string; steps: Step[] }> = {
     label: "History",
     steps: [
       { element: "[data-tour=page-head]", title: "History", text: "Every change to the site's content, newest first: saves in the admin and changes the developers made in the site's code, with who made each one and when." },
-      { element: "main nav[aria-label='History by section']", title: "By section", text: "Hero, Studio details, Work projects, Series and Team each keep their own versions here. Industries and pages have theirs on their own screens (History and restore)." },
+      { element: "main nav[aria-label='History by section']", title: "By section", text: "Hero, Studio details, Work projects, Series, Team and People in focus each keep their own versions here. Industries and pages have theirs on their own screens (History and restore)." },
       { element: "main ol > li a", title: "Step 1 · Open a change", text: "Click a change to open that part's history." },
       { element: "main ol", title: "Step 2 · Find the version", text: "Each version shows who made it and when. Open “Changed …” to see every field that changed, the old text crossed out next to the new." },
       { element: "main ol", title: "Step 3 · Restore", text: "Click Restore this version, then Yes, restore. It goes live on the next visit, and the version it replaced is kept, so you can undo the restore the same way." },
@@ -170,7 +179,7 @@ const SHELL: Step[] = [
   { element: "[data-tour=tour]", title: "Help anytime", text: "“Guide this page” explains just the screen you're on." },
 ];
 
-const ORDER = ["/hero", "/industries", "/pages", "/work", "/series", "/team", "/studio", "/activity", "/account"];
+const ORDER = ["/hero", "/industries", "/pages", "/work", "/series", "/team", "/focus", "/studio", "/activity", "/account"];
 const MODE = "vb-tour"; // sessionStorage: "full" while the full tour crosses pages
 const SEEN = "vb-tour-seen"; // localStorage: the full tour has been offered once
 

@@ -12,7 +12,7 @@ import { PAGES } from "../pages/pages";
 export const metadata: Metadata = { title: "History" };
 
 /** The documents saved whole (no per-item history screen of their own) */
-const WHOLE: DocKey[] = ["hero", "studio", "projects", "episodes", "team"];
+const WHOLE: DocKey[] = ["hero", "studio", "projects", "episodes", "team", "focus"];
 
 export default async function ActivityPage({ searchParams }: PageProps<"/activity">) {
   await requireSession();

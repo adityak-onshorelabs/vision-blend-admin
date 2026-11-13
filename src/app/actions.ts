@@ -8,7 +8,7 @@ import { endSession, hashPassword, requireSession, startSession, verifyPassword 
 import { parseDoc, versionOf } from "@/lib/cms/admin-data";
 import { historyPath } from "@/lib/cms/history";
 import { clearFailures, countFailures, deleteUser, getRevision, getUser, listUsers, recordFailure, saveUser, updateDoc, type RevisionAction, type Role } from "@/lib/cms/db";
-import { docSchemas, episodeSchema, heroSchema, industrySchema, memberSchema, pagesSchema, projectSchema, slugify, studioSchema, type CmsProject, type DocKey, type Docs, type PageKey } from "@/lib/cms/schema";
+import { docSchemas, episodeSchema, focusSchema, heroSchema, industrySchema, memberSchema, pagesSchema, projectSchema, slugify, studioSchema, type CmsProject, type DocKey, type Docs, type PageKey } from "@/lib/cms/schema";
 import { fetchDefaults, refreshSite } from "@/lib/cms/site";
 
 /** `version`: the fingerprint of what is now saved, for the next save's conflict check */
@@ -324,6 +324,60 @@ export async function deleteMember(fd: FormData) {
   const i = Number(str(fd, "index"));
   const name = str(fd, "name");
   await commitOrThrow("team", (ms) => (name && ms[i]?.name !== name ? ms : ms.filter((_, k) => k !== i)));
+}
+
+/* Careers: People in focus */
+
+export async function saveFocus(_: FormState, fd: FormData): Promise<FormState> {
+  const s = await requireSession();
+  // Features are addressed by position; "original" is empty when adding. "originalLabel" guards
+  // against the list having changed since the form opened.
+  const original = str(fd, "original");
+  const index = original === "" ? -1 : Number(original);
+
+  let uploaded: string | undefined;
+  const file = picked(fd, "photo");
+  if (file) {
+    const up = await upload(file, "focus", slugify(str(fd, "name") || str(fd, "label")) || "feature");
+    if (!up.url) return { errors: { photo: up.error ?? "Upload failed" } };
+    uploaded = up.url;
+  }
+
+  const result = await commit("focus", s.email, (list) => {
+    const existing = index >= 0 ? list[index] : undefined;
+    const expected = str(fd, "originalLabel");
+    if (index >= 0 && (!existing || (expected && existing.label !== expected))) {
+      return { fail: { message: "People in focus was changed elsewhere. Reload the page and try again." } };
+    }
+    const parsed = focusSchema.safeParse({
+      label: str(fd, "label"),
+      name: str(fd, "name"),
+      date: str(fd, "date"),
+      caption: str(fd, "caption"),
+      photo: uploaded ?? (fd.get("removePhoto") ? undefined : existing?.photo),
+    });
+    if (!parsed.success) return { fail: { errors: errorsOf(parsed.error) } };
+    return { next: index >= 0 ? list.map((f, i) => (i === index ? parsed.data : f)) : [...list, parsed.data] };
+  });
+  if (result.ok) redirect("/focus?saved=1");
+  return result;
+}
+
+export async function moveFocus(fd: FormData) {
+  const i = Number(str(fd, "index"));
+  const j = i + (str(fd, "dir") === "up" ? -1 : 1);
+  await commitOrThrow("focus", (list) => {
+    if (!list[i] || !list[j]) return list;
+    const next = [...list];
+    [next[i], next[j]] = [next[j], next[i]];
+    return next;
+  });
+}
+
+export async function deleteFocus(fd: FormData) {
+  const i = Number(str(fd, "index"));
+  const label = str(fd, "label");
+  await commitOrThrow("focus", (list) => (label && list[i]?.label !== label ? list : list.filter((_, k) => k !== i)));
 }
 
 /* Series episodes */

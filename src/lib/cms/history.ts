@@ -156,6 +156,7 @@ export const DOC_LABELS: Record<DocKey, string> = {
   team: "Team",
   industries: "Industry",
   pages: "Page",
+  focus: "People in focus",
 };
 
 const IST = new Intl.DateTimeFormat("en-IN", { timeZone: "Asia/Kolkata", dateStyle: "medium", timeStyle: "short" });

@@ -22,6 +22,10 @@ export const LIMITS = {
   location: 40,
   memberName: 40,
   memberRole: 50,
+  focusLabel: 40,
+  focusName: 60,
+  focusDate: 30,
+  focusCaption: 240,
 } as const;
 
 const text = (max: number) => z.string().trim().min(1, "Required").max(max, `Keep it to ${max} characters`);
@@ -59,6 +63,19 @@ export const memberSchema = z.object({
 export type CmsMember = z.infer<typeof memberSchema>;
 
 export const teamSchema = z.array(memberSchema).min(1, "Keep at least one person").max(40);
+
+/** One feature in Careers' "People in focus" (Employee of the Month and other recognition) */
+export const focusSchema = z.object({
+  label: text(LIMITS.focusLabel),
+  name: optionalText(LIMITS.focusName),
+  date: optionalText(LIMITS.focusDate),
+  caption: optionalText(LIMITS.focusCaption),
+  /** Uploaded photo (Vercel Blob URL), shown at 4:5 */
+  photo: z.httpUrl().optional(),
+});
+export type CmsFocus = z.infer<typeof focusSchema>;
+
+export const focusListSchema = z.array(focusSchema).max(9, "Keep it to nine features");
 
 export const heroSchema = z.object({
   eyebrow: text(LIMITS.eyebrow),
@@ -299,6 +316,7 @@ export const docSchemas = {
   episodes: episodesSchema,
   industries: industriesSchema,
   pages: pagesSchema,
+  focus: focusListSchema,
 } as const;
 export type DocKey = keyof typeof docSchemas;
 export type Docs = {
@@ -309,6 +327,7 @@ export type Docs = {
   episodes: CmsEpisode[];
   industries: CmsIndustry[];
   pages: CmsPages;
+  focus: CmsFocus[];
 };
 
 /** "my new project" -> "my-new-project" */

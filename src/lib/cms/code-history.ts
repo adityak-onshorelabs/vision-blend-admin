@@ -15,7 +15,7 @@ import type { Build } from "./site";
 
 type Part = { key: DocKey; item: string | null; data: unknown; hash: string };
 
-const WHOLE: DocKey[] = ["hero", "studio", "projects", "episodes", "team"];
+const WHOLE: DocKey[] = ["hero", "studio", "projects", "episodes", "team", "focus"];
 
 function parts(docs: Docs): Part[] {
   const out: Part[] = [];
