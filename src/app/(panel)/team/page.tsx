@@ -10,9 +10,12 @@ import { DeleteMember, MemberForm } from "./member-form";
 export const metadata: Metadata = { title: "Team" };
 
 export default async function TeamAdminPage({ searchParams }: PageProps<"/team">) {
+  // Started with the session check, not after it; only rendered once the check has passed
+  const content = loadDocs(["team"]);
+  content.catch(() => {});
   await requireSession();
   const { edit, saved } = await searchParams;
-  const { team } = await loadDocs();
+  const { team } = await content;
   const index = edit === undefined ? -1 : Number(edit);
   const editing = team[index] ?? null;
   const photos = team.filter((m) => m.photo).length;

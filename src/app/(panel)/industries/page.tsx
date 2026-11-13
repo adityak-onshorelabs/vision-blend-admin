@@ -7,8 +7,8 @@ import { PageHead } from "../../_components/nav";
 export const metadata: Metadata = { title: "Industries" };
 
 export default async function IndustriesAdminPage() {
-  await requireSession();
-  const { industries } = await loadDocs();
+  // In parallel: the content is only rendered once the session check has passed
+  const [, { industries }] = await Promise.all([requireSession(), loadDocs(["industries"])]);
 
   return (
     <>

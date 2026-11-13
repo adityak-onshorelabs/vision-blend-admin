@@ -12,11 +12,14 @@ import { PageForm } from "./page-form";
 export const metadata: Metadata = { title: "Page" };
 
 export default async function PageEditor({ params }: PageProps<"/pages/[page]">) {
+  // Started with the session check, not after it; only rendered once the check has passed
+  const content = loadDocs(["pages"]);
+  content.catch(() => {});
   await requireSession();
   const { page } = await params;
   const info = PAGES.find((p) => p.key === page);
   if (!info) notFound();
-  const { pages } = await loadDocs();
+  const { pages } = await content;
 
   return (
     <>

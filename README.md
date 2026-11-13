@@ -18,6 +18,8 @@ Industry pages and page copy use one editor (`src/app/_components/doc-editor.tsx
 
 Every save is kept in `content_revisions` (who, when, the saved value). Industry pages and each page's copy have their own **History and restore** screen (`/industries/<slug>/history`, `/pages/<page>/history`); everything else is under **History** (`/activity`). Each version shows the fields it changed from the one before, and **Restore this version** puts it live as a new save, so a restore can be undone the same way. The first save of a part also records what it replaced ("Before history began"). The last 300 versions per part are kept.
 
+Changes made in the site's code show there too: whenever the admin fetches the site's defaults (at most every 5 minutes per server instance), it fingerprints each industry, page and document and records the ones that changed as "Changed in the site's code", with the deploy's commit message and author (from Vercel's git variables, sent by the site's `/api/cms`). Code changes are compared with the previous code version, admin saves with the previous save. A part already saved in the admin keeps showing the admin's version on the site; restoring a code version puts it live.
+
 Saves run in a transaction with the document locked, so editors saving different industries at once never overwrite each other. The industry and page editors also send the version they opened: if someone else saved in between, the save is refused with a message instead of silently replacing their work.
 
 ## Security

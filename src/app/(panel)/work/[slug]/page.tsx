@@ -9,10 +9,13 @@ import { ProjectForm } from "./project-form";
 export const metadata: Metadata = { title: "Project" };
 
 export default async function ProjectAdminPage({ params, searchParams }: PageProps<"/work/[slug]">) {
+  // Started with the session check, not after it; only rendered once the check has passed
+  const content = loadDocs(["projects"]);
+  content.catch(() => {});
   await requireSession();
   const { slug } = await params;
   const { saved } = await searchParams;
-  const { projects } = await loadDocs();
+  const { projects } = await content;
   const project = slug === "new" ? null : projects.find((p) => p.slug === slug);
   if (slug !== "new" && !project) notFound();
 

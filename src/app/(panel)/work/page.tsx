@@ -8,8 +8,8 @@ import { PageHead } from "../../_components/nav";
 export const metadata: Metadata = { title: "Work" };
 
 export default async function WorkAdminPage() {
-  await requireSession();
-  const { projects } = await loadDocs();
+  // In parallel: the content is only rendered once the session check has passed
+  const [, { projects }] = await Promise.all([requireSession(), loadDocs(["projects"])]);
 
   return (
     <>

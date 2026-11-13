@@ -7,8 +7,8 @@ import { StudioForm } from "./studio-form";
 export const metadata: Metadata = { title: "Studio details" };
 
 export default async function StudioPage() {
-  await requireSession();
-  const { studio } = await loadDocs();
+  // In parallel: the content is only rendered once the session check has passed
+  const [, { studio }] = await Promise.all([requireSession(), loadDocs(["studio"])]);
   return (
     <>
       <PageHead

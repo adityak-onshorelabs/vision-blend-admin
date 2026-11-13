@@ -10,9 +10,12 @@ import { IndustryForm } from "./industry-form";
 export const metadata: Metadata = { title: "Industry" };
 
 export default async function IndustryPage({ params }: PageProps<"/industries/[slug]">) {
+  // Started with the session check, not after it; only rendered once the check has passed
+  const content = loadDocs(["industries"]);
+  content.catch(() => {});
   await requireSession();
   const { slug } = await params;
-  const { industries } = await loadDocs();
+  const { industries } = await content;
   const industry = industries.find((i) => i.slug === slug);
   if (!industry) notFound();
 

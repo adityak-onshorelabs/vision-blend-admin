@@ -18,7 +18,7 @@ export default async function ActivityPage({ searchParams }: PageProps<"/activit
   await requireSession();
   const query = await searchParams;
   const doc = typeof query.doc === "string" && WHOLE.includes(query.doc as DocKey) && query.doc in docSchemas ? (query.doc as DocKey) : null;
-  const [docs, activity, names] = await Promise.all([loadDocs(), listActivity(150), namesByEmail()]);
+  const [docs, activity, names] = await Promise.all([loadDocs(doc ? ["industries", doc] : ["industries"]), listActivity(150), namesByEmail()]);
 
   if (doc) {
     return (
@@ -41,7 +41,7 @@ export default async function ActivityPage({ searchParams }: PageProps<"/activit
 
   return (
     <>
-      <PageHead title="History" text="Every change saved in the admin, newest first, and who made it. Open one to see what changed and to put an earlier version back." />
+      <PageHead title="History" text="Every change, newest first, and who made it: saves in the admin and changes to the content in the site's code. Open one to see what changed and to put an earlier version back." />
       <nav aria-label="History by section" className="-mt-4 flex flex-wrap gap-x-6 gap-y-2 text-[0.92rem]">
         {WHOLE.map((k) => (
           <Link key={k} href={`/activity?doc=${k}`} className="u">
@@ -60,7 +60,8 @@ export default async function ActivityPage({ searchParams }: PageProps<"/activit
                   {r.key === "industries" ? `${DOC_LABELS.industries}: ${itemName(r.key, r.item)}` : itemName(r.key, r.item)}
                 </Link>
                 <span className="text-[0.88rem] text-muted-foreground">
-                  {r.action === "restore" ? "Restored an earlier version" : "Saved"} by {names.get(r.created_by) ?? r.created_by}
+                  {r.action === "restore" ? "Restored an earlier version" : r.action === "code" ? "Changed in the site's code" : "Saved"} by {names.get(r.created_by) ?? r.created_by}
+                  {r.action === "code" && r.note ? ` · ${r.note}` : ""}
                 </span>
               </span>
               <span className="text-[0.86rem] tabular-nums text-[var(--faint)]">{when(r.created_at)}</span>

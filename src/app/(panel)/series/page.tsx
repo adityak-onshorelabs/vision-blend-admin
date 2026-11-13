@@ -8,9 +8,12 @@ import { DeleteEpisode, EpisodeForm } from "./episode-form";
 export const metadata: Metadata = { title: "Series" };
 
 export default async function SeriesAdminPage({ searchParams }: PageProps<"/series">) {
+  // Started with the session check, not after it; only rendered once the check has passed
+  const content = loadDocs(["episodes"]);
+  content.catch(() => {});
   await requireSession();
   const { edit, saved } = await searchParams;
-  const { episodes } = await loadDocs();
+  const { episodes } = await content;
   const editing = episodes.find((e) => String(e.ep) === edit) ?? null;
   const nextEp = Math.max(0, ...episodes.map((e) => e.ep)) + 1;
 

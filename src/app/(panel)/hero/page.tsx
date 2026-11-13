@@ -7,8 +7,8 @@ import { HeroForm } from "./hero-form";
 export const metadata: Metadata = { title: "Hero" };
 
 export default async function HeroPage() {
-  await requireSession();
-  const { hero } = await loadDocs();
+  // In parallel: the content is only rendered once the session check has passed
+  const [, { hero }] = await Promise.all([requireSession(), loadDocs(["hero"])]);
   return (
     <>
       <PageHead

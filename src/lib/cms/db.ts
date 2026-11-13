@@ -13,6 +13,8 @@ import type { DocKey } from "./schema";
   - content: one JSON document per key (the site reads only this table)
   - content_revisions: every saved version, for History and restore. `item` names the part of a
     document the revision holds (an industry slug, a page key); without it, the whole document.
+    Admin saves are "save"/"restore"/"baseline"; "code" rows record a change to the site's own
+    defaults (a deploy), with the commit in `note` and a fingerprint in `hash`.
   - admin_users: editors, with session_version, which signs out every session when it changes
   - login_attempts: failed sign-ins, to slow down password guessing
 */
@@ -20,7 +22,7 @@ import type { DocKey } from "./schema";
 export type Role = "owner" | "editor";
 export type AdminUser = { email: string; name: string; password_hash: string; role: Role; created_at: string; session_version: number };
 
-export type RevisionAction = "save" | "restore" | "baseline";
+export type RevisionAction = "save" | "restore" | "baseline" | "code";
 export type Revision = {
   id: number;
   key: DocKey;
@@ -30,6 +32,8 @@ export type Revision = {
   restored_from: number | null;
   created_by: string;
   created_at: string;
+  /** For "code": the commit that changed it */
+  note: string | null;
 };
 /**
  * `before`: the value this save replaces. When the part has no history yet it is recorded first
@@ -45,8 +49,9 @@ function connect() {
   const url = process.env.DATABASE_URL;
   if (!url) return null;
   const local = /@(localhost|127\.0\.0\.1)[:/]/.test(url);
-  // One connection per function instance, closed when idle, so serverless never piles them up
-  return postgres(url, { max: 1, idle_timeout: 20, ssl: local ? false : "require" });
+  // One connection per function instance, so serverless never piles them up. Kept open for a few
+  // idle minutes: opening a new one (TLS to Railway) costs more than the query, on every click.
+  return postgres(url, { max: 1, idle_timeout: 300, max_lifetime: 60 * 30, ssl: local ? false : "require" });
 }
 
 const sql = connect();
@@ -61,16 +66,26 @@ type DevStore = {
 let ready: Promise<unknown> | null = null;
 function ensureTables() {
   if (!sql) return Promise.resolve();
+  // One quick check per server instance; the schema is only created when something is missing,
+  // and then in a single round trip (each one to Railway costs a noticeable delay)
   ready ??= (async () => {
-    await sql`create table if not exists content (key text primary key, data jsonb not null, updated_at timestamptz not null default now(), updated_by text)`;
-    await sql`create table if not exists admin_users (email text primary key, name text not null, password_hash text not null, role text not null default 'editor', created_at timestamptz not null default now())`;
-    await sql`alter table admin_users add column if not exists session_version integer not null default 0`;
-    await sql`create table if not exists content_revisions (
-      id bigserial primary key, key text not null, item text, data jsonb not null, action text not null default 'save',
-      restored_from bigint, created_by text not null, created_at timestamptz not null default now())`;
-    await sql`create index if not exists content_revisions_item on content_revisions (key, item, id desc)`;
-    await sql`create table if not exists login_attempts (id bigserial primary key, scope text not null, at timestamptz not null default now())`;
-    await sql`create index if not exists login_attempts_scope on login_attempts (scope, at)`;
+    const [state] = (await sql`select to_regclass('public.login_attempts') is not null
+      and exists (select 1 from information_schema.columns where table_name = 'admin_users' and column_name = 'session_version')
+      and exists (select 1 from information_schema.columns where table_name = 'content_revisions' and column_name = 'hash') as ok`) as unknown as { ok: boolean }[];
+    if (state?.ok) return;
+    await sql.unsafe(`
+      create table if not exists content (key text primary key, data jsonb not null, updated_at timestamptz not null default now(), updated_by text);
+      create table if not exists admin_users (email text primary key, name text not null, password_hash text not null, role text not null default 'editor', created_at timestamptz not null default now());
+      alter table admin_users add column if not exists session_version integer not null default 0;
+      create table if not exists content_revisions (
+        id bigserial primary key, key text not null, item text, data jsonb not null, action text not null default 'save',
+        restored_from bigint, created_by text not null, created_at timestamptz not null default now());
+      create index if not exists content_revisions_item on content_revisions (key, item, id desc);
+      alter table content_revisions add column if not exists note text;
+      alter table content_revisions add column if not exists hash text;
+      create table if not exists login_attempts (id bigserial primary key, scope text not null, at timestamptz not null default now());
+      create index if not exists login_attempts_scope on login_attempts (scope, at);
+    `);
   })().catch((err) => {
     ready = null;
     throw err;
@@ -101,10 +116,14 @@ function devLocked<T>(run: () => Promise<T>): Promise<T> {
 
 /* Content documents */
 
-export async function readDocs(): Promise<Partial<Record<DocKey, unknown>>> {
-  if (!sql) return Object.fromEntries(Object.entries((await readDev()).content).map(([k, v]) => [k, v.data]));
+/** The saved documents, or only `keys` (each screen needs one; the industries document is large) */
+export async function readDocs(keys?: DocKey[]): Promise<Partial<Record<DocKey, unknown>>> {
+  if (!sql) {
+    const content = Object.entries((await readDev()).content).filter(([k]) => !keys || keys.includes(k as DocKey));
+    return Object.fromEntries(content.map(([k, v]) => [k, v.data]));
+  }
   await ensureTables();
-  const rows = (await sql`select key, data from content`) as unknown as { key: DocKey; data: unknown }[];
+  const rows = (keys ? await sql`select key, data from content where key in ${sql(keys)}` : await sql`select key, data from content`) as unknown as { key: DocKey; data: unknown }[];
   return Object.fromEntries(rows.map((r) => [r.key, r.data]));
 }
 
@@ -132,10 +151,10 @@ export async function updateDoc<T>(
       let id = revisions.reduce((m, r) => Math.max(m, r.id), 0);
       for (const r of out.revisions) {
         const item = r.item ?? null;
-        if (r.before !== undefined && !revisions.some((x) => x.key === key && x.item === item)) {
-          revisions.push({ id: ++id, key, item, data: r.before, action: "baseline", restored_from: null, created_by: "Before history began", created_at: now });
+        if (r.before !== undefined && !revisions.some((x) => x.key === key && x.item === item && x.action !== "code")) {
+          revisions.push({ id: ++id, key, item, data: r.before, action: "baseline", restored_from: null, created_by: "Before history began", created_at: now, note: null });
         }
-        revisions.push({ id: ++id, key, item, data: r.data, action: r.action, restored_from: r.restoredFrom ?? null, created_by: by, created_at: now });
+        revisions.push({ id: ++id, key, item, data: r.data, action: r.action, restored_from: r.restoredFrom ?? null, created_by: by, created_at: now, note: null });
         const mine = revisions.filter((x) => x.key === key && x.item === item);
         if (mine.length > KEEP_REVISIONS) {
           const drop = new Set(mine.slice(0, mine.length - KEEP_REVISIONS).map((x) => x.id));
@@ -148,27 +167,43 @@ export async function updateDoc<T>(
     });
   }
   await ensureTables();
+  // Few round trips: each one to Railway is a noticeable wait
   return sql.begin(async (tx) => {
-    // Lock the row (or, for a document never saved, the key) for the rest of the transaction
+    // Lock the key for the rest of the transaction. Its own statement, so the read below sees
+    // anything committed while this one waited.
     await tx`select pg_advisory_xact_lock(hashtext(${`content:${key}`}))`;
-    const rows = (await tx`select data from content where key = ${key}`) as unknown as { data: unknown }[];
-    const out = await change(rows[0]?.data);
+    const [row] = (await tx`select (select data from content where key = ${key}) as data,
+      coalesce((select array_agg(distinct coalesce(item, '')) from content_revisions where key = ${key} and action <> 'code'), '{}') as items`) as unknown as { data: unknown; items: string[] }[];
+    const out = await change(row?.data ?? undefined);
     if (!out) return null;
-    await tx`insert into content (key, data, updated_at, updated_by) values (${key}, ${tx.json(out.data as postgres.JSONValue)}, now(), ${by})
-      on conflict (key) do update set data = excluded.data, updated_at = now(), updated_by = excluded.updated_by`;
+    const tracked = new Set(row?.items ?? []);
     for (const r of out.revisions) {
       const item = r.item ?? null;
-      if (r.before !== undefined) {
-        const seen = await tx`select 1 from content_revisions where key = ${key} and item is not distinct from ${item} limit 1`;
-        if (!seen.length) {
-          await tx`insert into content_revisions (key, item, data, action, created_by, created_at)
-            values (${key}, ${item}, ${tx.json(r.before as postgres.JSONValue)}, 'baseline', 'Before history began', now() - interval '1 second')`;
-        }
+      if (r.before !== undefined && !tracked.has(item ?? "")) {
+        await tx`insert into content_revisions (key, item, data, action, created_by, created_at)
+          values (${key}, ${item}, ${tx.json(r.before as postgres.JSONValue)}, 'baseline', 'Before history began', now() - interval '1 second')`;
       }
+    }
+    const [first, ...rest] = out.revisions;
+    // The document, its revision and the pruning of old revisions in one statement
+    if (first) {
+      const item = first.item ?? null;
+      await tx`with saved as (
+          insert into content (key, data, updated_at, updated_by) values (${key}, ${tx.json(out.data as postgres.JSONValue)}, now(), ${by})
+          on conflict (key) do update set data = excluded.data, updated_at = now(), updated_by = excluded.updated_by returning 1
+        ), revision as (
+          insert into content_revisions (key, item, data, action, restored_from, created_by)
+          values (${key}, ${item}, ${tx.json(first.data as postgres.JSONValue)}, ${first.action}, ${first.restoredFrom ?? null}, ${by}) returning 1
+        )
+        delete from content_revisions where key = ${key} and item is not distinct from ${item} and id not in (
+          select id from content_revisions where key = ${key} and item is not distinct from ${item} order by id desc limit ${KEEP_REVISIONS - 1})`;
+    } else {
+      await tx`insert into content (key, data, updated_at, updated_by) values (${key}, ${tx.json(out.data as postgres.JSONValue)}, now(), ${by})
+        on conflict (key) do update set data = excluded.data, updated_at = now(), updated_by = excluded.updated_by`;
+    }
+    for (const r of rest) {
       await tx`insert into content_revisions (key, item, data, action, restored_from, created_by)
-        values (${key}, ${item}, ${tx.json(r.data as postgres.JSONValue)}, ${r.action}, ${r.restoredFrom ?? null}, ${by})`;
-      await tx`delete from content_revisions where key = ${key} and item is not distinct from ${item} and id not in (
-        select id from content_revisions where key = ${key} and item is not distinct from ${item} order by id desc limit ${KEEP_REVISIONS})`;
+        values (${key}, ${r.item ?? null}, ${tx.json(r.data as postgres.JSONValue)}, ${r.action}, ${r.restoredFrom ?? null}, ${by})`;
     }
     return { data: out.data };
   }) as Promise<{ data: T } | null>;
@@ -192,7 +227,7 @@ export async function listRevisions(key: DocKey, item: string | null, limit = 10
       .slice(0, limit);
   }
   await ensureTables();
-  return (await sql`select id::int, key, item, data, action, restored_from::int, created_by, created_at from content_revisions
+  return (await sql`select id::int, key, item, data, action, restored_from::int, created_by, created_at, note from content_revisions
     where key = ${key} and item is not distinct from ${item} order by id desc limit ${limit}`) as unknown as Revision[];
 }
 
@@ -200,7 +235,7 @@ export async function getRevision(id: number): Promise<Revision | null> {
   if (!Number.isSafeInteger(id) || id < 1) return null;
   if (!sql) return (await readDev()).revisions?.find((r) => r.id === id) ?? null;
   await ensureTables();
-  const rows = (await sql`select id::int, key, item, data, action, restored_from::int, created_by, created_at from content_revisions where id = ${id}`) as unknown as Revision[];
+  const rows = (await sql`select id::int, key, item, data, action, restored_from::int, created_by, created_at, note from content_revisions where id = ${id}`) as unknown as Revision[];
   return rows[0] ?? null;
 }
 
@@ -211,11 +246,49 @@ export async function listActivity(limit = 150): Promise<Omit<Revision, "data">[
       .filter((r) => r.action !== "baseline")
       .sort((a, b) => b.id - a.id)
       .slice(0, limit)
-      .map((r) => ({ id: r.id, key: r.key, item: r.item, action: r.action, restored_from: r.restored_from, created_by: r.created_by, created_at: r.created_at }));
+      .map((r) => ({ id: r.id, key: r.key, item: r.item, action: r.action, restored_from: r.restored_from, created_by: r.created_by, created_at: r.created_at, note: r.note ?? null }));
   }
   await ensureTables();
-  return (await sql`select id::int, key, item, action, restored_from::int, created_by, created_at from content_revisions
+  return (await sql`select id::int, key, item, action, restored_from::int, created_by, created_at, note from content_revisions
     where action <> 'baseline' order by id desc limit ${limit}`) as unknown as Omit<Revision, "data">[];
+}
+
+/**
+ * Records the site's own defaults (what the code says) for each part whose fingerprint differs
+ * from the last recorded one, so changes made in code show in History next to admin saves.
+ */
+export async function recordCodeVersions(parts: { key: DocKey; item: string | null; data: unknown; hash: string }[], by: string, note: string) {
+  if (!sql) {
+    return devLocked(async () => {
+      const store = await readDev();
+      const revisions = (store.revisions ?? []) as (Revision & { hash?: string })[];
+      let id = revisions.reduce((m, r) => Math.max(m, r.id), 0);
+      const now = new Date().toISOString();
+      let added = 0;
+      for (const p of parts) {
+        const last = [...revisions].reverse().find((r) => r.action === "code" && r.key === p.key && r.item === p.item);
+        if (last?.hash === p.hash) continue;
+        revisions.push({ id: ++id, key: p.key, item: p.item, data: p.data, action: "code", restored_from: null, created_by: by, created_at: now, note, hash: p.hash });
+        added++;
+      }
+      if (!added) return;
+      store.revisions = revisions;
+      await writeDev(store);
+    });
+  }
+  await ensureTables();
+  await sql.begin(async (tx) => {
+    // One instance at a time, so a deploy is recorded once
+    await tx`select pg_advisory_xact_lock(hashtext('content:code-versions'))`;
+    const rows = (await tx`select distinct on (key, item) key, coalesce(item, '') as item, hash from content_revisions
+      where action = 'code' order by key, item, id desc`) as unknown as { key: string; item: string; hash: string }[];
+    const last = new Map(rows.map((r) => [`${r.key}:${r.item}`, r.hash]));
+    for (const p of parts) {
+      if (last.get(`${p.key}:${p.item ?? ""}`) === p.hash) continue;
+      await tx`insert into content_revisions (key, item, data, action, created_by, note, hash)
+        values (${p.key}, ${p.item}, ${tx.json(p.data as postgres.JSONValue)}, 'code', ${by}, ${note}, ${p.hash})`;
+    }
+  });
 }
 
 /* Failed sign-ins */

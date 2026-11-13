@@ -11,11 +11,14 @@ import { PAGES } from "../../pages";
 export const metadata: Metadata = { title: "Page history" };
 
 export default async function PageHistory({ params, searchParams }: PageProps<"/pages/[page]/history">) {
+  // Started with the session check, not after it; only rendered once the check has passed
+  const content = loadDocs(["pages"]);
+  content.catch(() => {});
   await requireSession();
   const [{ page }, query] = await Promise.all([params, searchParams]);
   const info = PAGES.find((p) => p.key === page);
   if (!info) notFound();
-  const { pages } = await loadDocs();
+  const { pages } = await content;
 
   return (
     <>
